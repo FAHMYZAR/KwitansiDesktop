@@ -190,9 +190,11 @@ class ReceiptController extends ChangeNotifier {
 
   Future<String?> saveCurrentToPdf() async {
     final (w, h) = _paperSize();
+    final initialDir = await _ensureDefaultPdfDirectory();
     final path = await FilePicker.platform.saveFile(
       dialogTitle: 'Simpan PDF Kwitansi',
       fileName: 'kwitansi_${current.no.replaceAll('/', '_')}.pdf',
+      initialDirectory: initialDir,
       type: FileType.custom,
       allowedExtensions: ['pdf'],
     );
@@ -327,6 +329,20 @@ class ReceiptController extends ChangeNotifier {
     history.clear();
     await _historyService.save(history);
     notifyListeners();
+  }
+
+  Future<String> _ensureDefaultPdfDirectory() async {
+    String root;
+    if (Platform.isWindows) {
+      root = Platform.environment['USERPROFILE'] ?? Directory.current.path;
+    } else {
+      root = Platform.environment['HOME'] ?? Directory.current.path;
+    }
+    final dir = Directory('$root${Platform.pathSeparator}Documents${Platform.pathSeparator}AlyaaFlorist${Platform.pathSeparator}PDF');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir.path;
   }
 
   (double, double) _paperSize() {

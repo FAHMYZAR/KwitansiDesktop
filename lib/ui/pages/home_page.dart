@@ -39,7 +39,7 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Nota Alya Florist', style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w800)),
+            Text('Alyaa Florist', style: TextStyle(fontStyle: FontStyle.italic, fontWeight: FontWeight.w800)),
             Text('Cepat dicatat, rapi dicetak.', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
           ],
         ),

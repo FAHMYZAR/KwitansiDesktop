@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "nota_alya_florist" "\0"
+            VALUE "CompanyName", "Alyaa Florist" "\0"
+            VALUE "FileDescription", "Alyaa Florist" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "nota_alya_florist" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "nota_alya_florist.exe" "\0"
-            VALUE "ProductName", "nota_alya_florist" "\0"
+            VALUE "InternalName", "AlyaaFlorist" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Alyaa Florist. All rights reserved." "\0"
+            VALUE "OriginalFilename", "AlyaaFlorist.exe" "\0"
+            VALUE "ProductName", "Alyaa Florist" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
