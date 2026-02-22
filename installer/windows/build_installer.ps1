@@ -1,8 +1,12 @@
 param(
-  [string]$ProjectRoot = "$(Resolve-Path "$PSScriptRoot/../..").Path"
+  [string]$ProjectRoot = ''
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($ProjectRoot)) {
+  $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+}
 
 Set-Location $ProjectRoot
 
