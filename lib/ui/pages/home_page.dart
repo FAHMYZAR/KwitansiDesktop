@@ -19,6 +19,7 @@ class _HomePageState extends State<HomePage> {
   final _actionScrollController = ScrollController();
   double _leftPaneRatio = 0.56;
   double _settingsDrawerWidth = 460;
+  int? _templateBatchIndex;
   ReceiptController get c => widget.controller;
 
   @override
@@ -30,6 +31,9 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final data = c.current;
+    if (_templateBatchIndex != null && _templateBatchIndex! >= c.batchQueue.length) {
+      _templateBatchIndex = null;
+    }
     final currency = NumberFormat('#,##0', 'id_ID');
 
     return Scaffold(
@@ -157,8 +161,8 @@ class _HomePageState extends State<HomePage> {
               _field('Prefix nomor', c.settings.receiptPrefix, 'Contoh: AF', c.setReceiptPrefix),
               _field('Format nomor', c.settings.receiptFormat,
                   'Template: {counter}/{prefix}/{month}/{year}', c.setReceiptFormat),
-              _field('Skala print (%)', '${c.settings.printScale}', '70 = lebih kecil, 100 = normal',
-                  (v) => c.settings.printScale = int.tryParse(v) ?? 70),
+              _field('Skala print (%)', '${c.settings.printScale}', '100 = normal, 120 = lebih besar (disarankan 100-130)',
+                  (v) => c.settings.printScale = (int.tryParse(v) ?? 100).clamp(90, 160)),
               const Divider(height: 28),
               _field('Nama Header Kwitansi', c.settings.companyName, 'Nama utama di atas kwitansi',
                   (v) => c.settings.companyName = v),
@@ -206,7 +210,7 @@ class _HomePageState extends State<HomePage> {
                         if (result?.files.single.path case final p?) c.setLogoMainPath(p);
                       },
                       icon: const Icon(Icons.image_outlined),
-                      label: const Text('Logo Utama'),
+                      label: const Text('Utama'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -217,7 +221,7 @@ class _HomePageState extends State<HomePage> {
                         if (result?.files.single.path case final p?) c.setLogoSignaturePath(p);
                       },
                       icon: const Icon(Icons.draw_outlined),
-                      label: const Text('Default TTD'),
+                      label: const Text('TTD'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -228,7 +232,7 @@ class _HomePageState extends State<HomePage> {
                         if (result?.files.single.path case final p?) c.setCapSignaturePath(p);
                       },
                       icon: const Icon(Icons.verified_outlined),
-                      label: const Text('Cap TTD'),
+                      label: const Text('Cap'),
                     ),
                   ),
                 ],
@@ -237,7 +241,7 @@ class _HomePageState extends State<HomePage> {
                 contentPadding: EdgeInsets.zero,
                 value: c.settings.capSignatureEnabled,
                 onChanged: c.toggleCapSignature,
-                title: const Text('Aktifkan Cap TTD'),
+                title: const Text('Aktifkan Cap'),
                 subtitle: const Text('Jika nonaktif, hanya default TTD (pena) yang ditampilkan'),
               ),
               const SizedBox(height: 12),
@@ -289,7 +293,21 @@ class _HomePageState extends State<HomePage> {
                       padding: const EdgeInsets.all(16),
                       child: ListView(
                         children: [
-                          Text('Form Nota', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                          Row(
+                            children: [
+                              IconButton(
+                                tooltip: 'Kosongkan form nota',
+                                onPressed: () {
+                                  c.refreshLayout();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Form nota dikosongkan')),
+                                  );
+                                },
+                                icon: const Icon(Icons.refresh),
+                              ),
+                              Text('Form Nota', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                            ],
+                          ),
                           const SizedBox(height: 14),
                           Card(
                             child: Padding(
@@ -303,8 +321,20 @@ class _HomePageState extends State<HomePage> {
                                       Expanded(child: _field('Tanggal', data.date, 'Tanggal otomatis, bisa edit jika perlu', (v) => c.updateCurrent((d) => d.date = v))),
                                     ],
                                   ),
-                                  _field('Penerima', data.recipientName, 'Contoh: Nama orang/perusahaan', (v) => c.updateCurrent((d) => d.recipientName = v)),
-                                  _field('Penerima baris 2', data.recipientLine2, 'Opsional', (v) => c.updateCurrent((d) => d.recipientLine2 = v)),
+                                  _field(
+                                    'Penerima',
+                                    data.recipientName,
+                                    'Contoh: Nama orang/perusahaan',
+                                    (v) => c.updateCurrent((d) => d.recipientName = v),
+                                    fieldKey: ValueKey('recipient-${data.id}'),
+                                  ),
+                                  _field(
+                                    'Penerima baris 2',
+                                    data.recipientLine2,
+                                    'Opsional',
+                                    (v) => c.updateCurrent((d) => d.recipientLine2 = v),
+                                    fieldKey: ValueKey('recipient2-${data.id}'),
+                                  ),
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
@@ -381,12 +411,62 @@ class _HomePageState extends State<HomePage> {
                                     'Satu baris untuk satu identitas pengirim',
                                     (v) => c.updateCurrent((d) => d.senderDetails = v.split('\n')),
                                     maxLines: 4,
+                                    fieldKey: ValueKey('sender-${data.id}'),
                                   ),
                                   _field(
                                     'Penandatangan',
                                     data.signer,
                                     'Nama yang tampil di bawah tanda tangan',
                                     (v) => c.updateCurrent((d) => d.signer = v),
+                                    fieldKey: ValueKey('signer-${data.id}'),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      const Text('Use Template', style: TextStyle(fontWeight: FontWeight.w700)),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: DropdownButtonFormField<int>(
+                                          initialValue: _templateBatchIndex,
+                                          isExpanded: true,
+                                          decoration: const InputDecoration(
+                                            isDense: true,
+                                            border: OutlineInputBorder(),
+                                            hintText: 'Pilih batch sebagai template',
+                                          ),
+                                          items: List.generate(c.batchQueue.length, (index) {
+                                            final r = c.batchQueue[index];
+                                            return DropdownMenuItem(
+                                              value: index,
+                                              child: Text('#${index + 1} ${r.no}'),
+                                            );
+                                          }),
+                                          onChanged: (v) => setState(() => _templateBatchIndex = v),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      OutlinedButton(
+                                        onPressed: (_templateBatchIndex == null || c.batchQueue.isEmpty)
+                                            ? null
+                                            : () => c.useBatchAsTemplate(_templateBatchIndex!),
+                                        child: const Text('Pakai'),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.icon(
+                                      onPressed: () async {
+                                        await c.addToBatch();
+                                        if (!context.mounted) return;
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Nota disimpan ke batch dan form dikosongkan')),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.save_outlined),
+                                      label: const Text('Save'),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -442,48 +522,46 @@ class _HomePageState extends State<HomePage> {
                                     style: Theme.of(context).textTheme.bodySmall,
                                   ),
                                   const SizedBox(height: 8),
-                                  SingleChildScrollView(
-                                    controller: _actionScrollController,
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(
-                                      children: [
-                                        FilledButton.icon(
-                                          onPressed: c.addToBatch,
-                                          icon: const Icon(Icons.layers),
-                                          label: Text(c.editingBatchIndex >= 0 ? 'Update Batch' : 'Tambah Batch'),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        OutlinedButton.icon(
-                                          onPressed: c.printCurrent,
-                                          icon: const Icon(Icons.print),
-                                          label: const Text('Nota Aktif'),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        OutlinedButton.icon(
-                                          onPressed: c.batchQueue.isEmpty ? null : c.printBatch,
-                                          icon: const Icon(Icons.print_outlined),
-                                          label: const Text('Semua Batch'),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        OutlinedButton.icon(
-                                          onPressed: () async {
-                                            final path = await c.saveCurrentToPdf();
-                                            if (!context.mounted || path == null) return;
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('PDF tersimpan: $path')),
-                                            );
-                                          },
-                                          icon: const Icon(Icons.picture_as_pdf_outlined),
-                                          label: const Text('Save PDF'),
-                                        ),
-                                        if (c.batchQueue.isNotEmpty) ...[
-                                          const SizedBox(width: 10),
-                                          TextButton(
-                                            onPressed: c.clearBatch,
-                                            child: Text('Clear Batch (${c.batchQueue.length})'),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: SingleChildScrollView(
+                                      controller: _actionScrollController,
+                                      scrollDirection: Axis.horizontal,
+                                      child: Row(
+                                        children: [
+                                          FilledButton.icon(
+                                            onPressed: c.batchQueue.isEmpty ? null : c.printBatch,
+                                            icon: const Icon(Icons.print_outlined),
+                                            label: Text(c.batchQueue.length <= 1 ? 'Print' : 'Print All (${c.batchQueue.length})'),
                                           ),
+                                          const SizedBox(width: 8),
+                                          OutlinedButton.icon(
+                                            onPressed: () async {
+                                              final path = await c.saveCurrentToPdf();
+                                              if (!context.mounted || path == null) return;
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text('PDF tersimpan: $path')),
+                                              );
+                                            },
+                                            icon: const Icon(Icons.picture_as_pdf_outlined),
+                                            label: const Text('Save PDF'),
+                                          ),
+                                          if (c.batchQueue.length > 1) ...[
+                                            const SizedBox(width: 8),
+                                            OutlinedButton.icon(
+                                              onPressed: () async {
+                                                final path = await c.saveBatchToPdf();
+                                                if (!context.mounted || path == null) return;
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text('PDF batch tersimpan: $path')),
+                                                );
+                                              },
+                                              icon: const Icon(Icons.collections_bookmark_outlined),
+                                              label: const Text('Save PDF All'),
+                                            ),
+                                          ],
                                         ],
-                                      ],
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -497,22 +575,40 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   ReceiptPreviewCard(data: c.current),
                                   const SizedBox(height: 12),
-                                  Card(
-                                    child: ListView.builder(
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      itemCount: c.batchQueue.length,
-                                      itemBuilder: (context, index) {
-                                        final r = c.batchQueue[index];
-                                        return ListTile(
-                                          title: Text('#${index + 1} ${r.no}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                                          subtitle: Text('${r.recipientName.isEmpty ? '(Tanpa penerima)' : r.recipientName} • Rp ${currency.format(r.grandTotal)}'),
-                                          onTap: () => c.editBatch(index),
-                                          trailing: IconButton(onPressed: () => c.deleteBatch(index), icon: const Icon(Icons.delete_outline)),
-                                        );
-                                      },
+                                  if (c.batchQueue.isNotEmpty) ...[
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        'Preview Batch (yang akan tercetak)',
+                                        style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 8),
+                                    ...List.generate(c.batchQueue.length, (index) {
+                                      final r = c.batchQueue[index];
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 12),
+                                        child: Card(
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8),
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                ListTile(
+                                                  contentPadding: EdgeInsets.zero,
+                                                  title: Text('#${index + 1} ${r.no}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                                  subtitle: Text('${r.recipientName.isEmpty ? '(Tanpa penerima)' : r.recipientName} • Rp ${currency.format(r.grandTotal)}'),
+                                                  onTap: () => c.editBatch(index),
+                                                  trailing: IconButton(onPressed: () => c.deleteBatch(index), icon: const Icon(Icons.delete_outline)),
+                                                ),
+                                                ReceiptPreviewCard(data: r),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ],
                                 ],
                               ),
                             ),

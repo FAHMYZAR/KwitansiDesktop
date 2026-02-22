@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../core/receipt_number_generator.dart';
 import '../models/app_settings.dart';
@@ -52,12 +53,37 @@ class ReceiptController extends ChangeNotifier {
   ReceiptData _newReceipt() {
     final id = DateTime.now().microsecondsSinceEpoch.toString();
     final no = ReceiptNumberGenerator.generate(settings);
-    return ReceiptData.createDefault(settings, id, no);
+    final data = ReceiptData.createDefault(settings, id, no);
+    return _emptyEditableFields(data);
+  }
+
+  ReceiptData _emptyEditableFields(ReceiptData data) {
+    data.recipientName = '';
+    data.recipientLine2 = '';
+    data.signer = '';
+    data.senderDetails = [];
+    data.items = [
+      ReceiptItem(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        quantity: 1,
+        name: '',
+        description: '',
+        price: 0,
+      ),
+    ];
+    return data;
   }
 
   void setThemeSeed(int color) {
     settings.themeSeed = color;
     _save();
+    notifyListeners();
+  }
+
+  void refreshLayout() {
+    current = _newReceipt();
+    editingBatchIndex = -1;
+    _saveDraft();
     notifyListeners();
   }
 
@@ -128,17 +154,12 @@ class ReceiptController extends ChangeNotifier {
   }
 
   Future<void> addToBatch() async {
+    batchQueue.add(current.copy());
     settings.receiptCounter += 1;
     await _save();
 
-    if (editingBatchIndex >= 0) {
-      batchQueue[editingBatchIndex] = current.copy();
-      editingBatchIndex = -1;
-    } else {
-      batchQueue.add(current.copy());
-    }
-
     current = _newReceipt();
+    editingBatchIndex = -1;
     await _saveDraft();
     notifyListeners();
   }
@@ -146,6 +167,16 @@ class ReceiptController extends ChangeNotifier {
   void editBatch(int index) {
     editingBatchIndex = index;
     current = batchQueue[index].copy();
+    _saveDraft();
+    notifyListeners();
+  }
+
+  void useBatchAsTemplate(int index) {
+    final template = batchQueue[index].copy();
+    template.no = ReceiptNumberGenerator.generate(settings);
+    template.date = DateFormat('d MMMM yyyy', 'id_ID').format(DateTime.now());
+    current = template;
+    editingBatchIndex = -1;
     _saveDraft();
     notifyListeners();
   }
@@ -208,6 +239,32 @@ class ReceiptController extends ChangeNotifier {
     );
     await File(path).writeAsBytes(bytes, flush: true);
     await addHistoryFromReceipt(current.copy());
+    return path;
+  }
+
+  Future<String?> saveBatchToPdf() async {
+    if (batchQueue.isEmpty) return null;
+    final (w, h) = _paperSize();
+    final initialDir = await _ensureDefaultPdfDirectory();
+    final path = await FilePicker.platform.saveFile(
+      dialogTitle: 'Simpan PDF Semua Batch',
+      fileName: 'kwitansi_batch_${DateTime.now().millisecondsSinceEpoch}.pdf',
+      initialDirectory: initialDir,
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+    if (path == null) return null;
+
+    final bytes = await _pdfService.buildPdfBytes(
+      batchQueue,
+      printScale: settings.printScale,
+      paperWidthMm: w,
+      paperHeightMm: h,
+    );
+    await File(path).writeAsBytes(bytes, flush: true);
+    for (final r in batchQueue) {
+      await addHistoryFromReceipt(r.copy());
+    }
     return path;
   }
 
@@ -276,9 +333,11 @@ class ReceiptController extends ChangeNotifier {
     settings = AppSettings.initial();
     current = _newReceipt();
     batchQueue.clear();
+    history.clear();
     editingBatchIndex = -1;
     await _save();
     await _saveDraft();
+    await _historyService.save(history);
     notifyListeners();
   }
 

@@ -14,16 +14,16 @@ class SettingsService {
 
     final map = jsonDecode(raw) as Map<String, dynamic>;
 
-    const defaultMain = '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/LogoMain.jpg';
-    const defaultPenTtd = '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/deafult_ttd.png';
-    const defaultCap = '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/cap_ttd.png';
+    const defaultMain = 'assets/LogoMain.jpg';
+    const defaultPenTtd = 'assets/deafult_ttd.png';
+    const defaultCap = 'assets/cap_ttd.png';
 
     String? mainPath = map['logoMainPath'] as String?;
     String? penPath = map['logoSignaturePath'] as String?;
     String? capPath = map['capSignaturePath'] as String?;
 
     // Migrasi data lama agar layer default TTD (pena) & cap tidak kebalik.
-    if (penPath == null || penPath.isEmpty || penPath.endsWith('/logo_ttd.png')) {
+    if (penPath == null || penPath.isEmpty || penPath.endsWith('/logo_ttd.png') || penPath.endsWith('/logo_ttd.png')) {
       penPath = defaultPenTtd;
     }
     if (capPath == null || capPath.isEmpty) {
@@ -32,11 +32,14 @@ class SettingsService {
     if (mainPath == null || mainPath.isEmpty || mainPath.endsWith('/logo_main.png')) {
       mainPath = defaultMain;
     }
+    if (mainPath.contains('/assets/')) mainPath = defaultMain;
+    if (penPath.contains('/assets/')) penPath = defaultPenTtd;
+    if (capPath.contains('/assets/')) capPath = defaultCap;
 
     return AppSettings(
       themeSeed: map['themeSeed'] as int? ?? 0xFF3F51B5,
       isDarkMode: map['isDarkMode'] as bool? ?? false,
-      printScale: map['printScale'] as int? ?? 70,
+      printScale: map['printScale'] as int? ?? 100,
       receiptCounter: ((map['receiptCounter'] as int?) ?? 1) < 1 ? 1 : ((map['receiptCounter'] as int?) ?? 1),
       receiptPrefix: map['receiptPrefix'] as String? ?? 'AF',
       receiptFormat: map['receiptFormat'] as String? ?? '{counter}/{prefix}/{month}/{year}',
@@ -64,8 +67,8 @@ class SettingsService {
       logoSignaturePath: penPath,
       capSignaturePath: capPath,
       capSignatureEnabled: map['capSignatureEnabled'] as bool? ?? true,
-      logoMainScale: map['logoMainScale'] as int? ?? 100,
-      logoSignatureScale: map['logoSignatureScale'] as int? ?? 100,
+      logoMainScale: map['logoMainScale'] as int? ?? 50,
+      logoSignatureScale: map['logoSignatureScale'] as int? ?? 85,
     );
   }
 

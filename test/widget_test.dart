@@ -26,7 +26,7 @@ void main() {
     await tester.pumpWidget(NotaAlyaApp(controller: controller));
     await tester.pumpAndSettle(const Duration(milliseconds: 500));
 
-    expect(find.textContaining('Nota Alya Florist'), findsOneWidget);
+    expect(find.textContaining('Alyaa Florist'), findsOneWidget);
     expect(find.text('Form Nota'), findsOneWidget);
   });
 }

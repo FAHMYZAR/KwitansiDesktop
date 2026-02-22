@@ -26,8 +26,8 @@ class AppSettings {
     this.logoSignaturePath,
     this.capSignaturePath,
     this.capSignatureEnabled = true,
-    this.logoMainScale = 100,
-    this.logoSignatureScale = 100,
+    this.logoMainScale = 50,
+    this.logoSignatureScale = 85,
   });
 
   int themeSeed;
@@ -62,7 +62,7 @@ class AppSettings {
   factory AppSettings.initial() => AppSettings(
         themeSeed: 0xFF3F51B5,
         isDarkMode: false,
-        printScale: 70,
+        printScale: 100,
         receiptCounter: 1,
         receiptPrefix: 'AF',
         receiptFormat: '{counter}/{prefix}/{month}/{year}',
@@ -86,9 +86,9 @@ class AppSettings {
         paperPreset: 'F4',
         customPaperWidthMm: 210,
         customPaperHeightMm: 330,
-        logoMainPath: '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/LogoMain.jpg',
-        logoSignaturePath: '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/deafult_ttd.png',
-        capSignaturePath: '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/cap_ttd.png',
+        logoMainPath: 'assets/LogoMain.jpg',
+        logoSignaturePath: 'assets/deafult_ttd.png',
+        capSignaturePath: 'assets/cap_ttd.png',
         capSignatureEnabled: true,
       );
 }
