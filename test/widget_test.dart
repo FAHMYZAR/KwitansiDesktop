@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nota_alya_florist/controllers/receipt_controller.dart';
 import 'package:nota_alya_florist/main.dart';
 import 'package:nota_alya_florist/services/draft_service.dart';
+import 'package:nota_alya_florist/services/history_service.dart';
 import 'package:nota_alya_florist/services/pdf_service.dart';
 import 'package:nota_alya_florist/services/settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,7 +20,7 @@ void main() {
   });
 
   testWidgets('app boot', (tester) async {
-    final controller = ReceiptController(SettingsService(), PdfService(), DraftService());
+    final controller = ReceiptController(SettingsService(), PdfService(), DraftService(), HistoryService());
     await controller.init();
 
     await tester.pumpWidget(NotaAlyaApp(controller: controller));

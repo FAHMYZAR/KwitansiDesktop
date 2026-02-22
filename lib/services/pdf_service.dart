@@ -16,12 +16,17 @@ class PdfService {
     double paperHeightMm = 330,
   }) async {
     await Printing.layoutPdf(
-      onLayout: (_) => _buildPdf(receipts, printScale, paperWidthMm, paperHeightMm),
+      onLayout: (_) => buildPdfBytes(receipts, printScale: printScale, paperWidthMm: paperWidthMm, paperHeightMm: paperHeightMm),
       name: receipts.length > 1 ? 'Batch_Kwitansi' : 'Kwitansi',
     );
   }
 
-  Future<Uint8List> _buildPdf(List<ReceiptData> receipts, int printScale, double paperWidthMm, double paperHeightMm) async {
+  Future<Uint8List> buildPdfBytes(
+    List<ReceiptData> receipts, {
+    int printScale = 70,
+    double paperWidthMm = 210,
+    double paperHeightMm = 330,
+  }) async {
     final pdf = pw.Document();
     final font = pw.Font.helvetica();
     final bold = pw.Font.helveticaBold();
@@ -174,7 +179,18 @@ class PdfService {
                   style: pw.TextStyle(font: bold, fontSize: f9, fontStyle: pw.FontStyle.italic),
                 ),
                 pw.SizedBox(height: 2),
-                pw.SizedBox(width: 40, height: 30, child: _pdfLogo(receipt.logoSignaturePath, receipt.logoSignatureScale)),
+                pw.SizedBox(
+                  width: 44,
+                  height: 34,
+                  child: pw.Stack(
+                    alignment: pw.Alignment.center,
+                    children: [
+                      _pdfLogo(receipt.logoSignaturePath, receipt.logoSignatureScale),
+                      if (receipt.capSignatureEnabled)
+                        _pdfLogo(receipt.capSignaturePath, receipt.logoSignatureScale),
+                    ],
+                  ),
+                ),
                 pw.SizedBox(height: 8 * scale),
                 pw.Text(
                   receipt.signer,

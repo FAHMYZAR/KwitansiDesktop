@@ -3,6 +3,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 import 'controllers/receipt_controller.dart';
 import 'services/draft_service.dart';
+import 'services/history_service.dart';
 import 'services/pdf_service.dart';
 import 'services/settings_service.dart';
 import 'ui/pages/home_page.dart';
@@ -11,7 +12,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID');
 
-  final controller = ReceiptController(SettingsService(), PdfService(), DraftService());
+  final controller = ReceiptController(SettingsService(), PdfService(), DraftService(), HistoryService());
   await controller.init();
 
   runApp(NotaAlyaApp(controller: controller));

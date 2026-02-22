@@ -19,6 +19,8 @@ class ReceiptData {
     required this.addressLines,
     this.logoMainPath,
     this.logoSignaturePath,
+    this.capSignaturePath,
+    this.capSignatureEnabled = true,
     this.logoMainScale = 100,
     this.logoSignatureScale = 100,
   });
@@ -37,6 +39,8 @@ class ReceiptData {
   List<String> addressLines;
   String? logoMainPath;
   String? logoSignaturePath;
+  String? capSignaturePath;
+  bool capSignatureEnabled;
   int logoMainScale;
   int logoSignatureScale;
 
@@ -57,6 +61,8 @@ class ReceiptData {
         addressLines: [...addressLines],
         logoMainPath: logoMainPath,
         logoSignaturePath: logoSignaturePath,
+        capSignaturePath: capSignaturePath,
+        capSignatureEnabled: capSignatureEnabled,
         logoMainScale: logoMainScale,
         logoSignatureScale: logoSignatureScale,
       );
@@ -76,6 +82,8 @@ class ReceiptData {
         'addressLines': addressLines,
         'logoMainPath': logoMainPath,
         'logoSignaturePath': logoSignaturePath,
+        'capSignaturePath': capSignaturePath,
+        'capSignatureEnabled': capSignatureEnabled,
         'logoMainScale': logoMainScale,
         'logoSignatureScale': logoSignatureScale,
       };
@@ -97,6 +105,8 @@ class ReceiptData {
         addressLines: ((map['addressLines'] as List?) ?? const []).map((e) => '$e').toList(),
         logoMainPath: map['logoMainPath'] as String?,
         logoSignaturePath: map['logoSignaturePath'] as String?,
+        capSignaturePath: map['capSignaturePath'] as String?,
+        capSignatureEnabled: map['capSignatureEnabled'] as bool? ?? true,
         logoMainScale: map['logoMainScale'] as int? ?? 100,
         logoSignatureScale: map['logoSignatureScale'] as int? ?? 100,
       );
@@ -125,6 +135,8 @@ class ReceiptData {
       addressLines: [...settings.addressLines],
       logoMainPath: settings.logoMainPath,
       logoSignaturePath: settings.logoSignaturePath,
+      capSignaturePath: settings.capSignaturePath,
+      capSignatureEnabled: settings.capSignatureEnabled,
       logoMainScale: settings.logoMainScale,
       logoSignatureScale: settings.logoSignatureScale,
     );

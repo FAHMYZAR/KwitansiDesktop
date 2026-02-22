@@ -58,6 +58,11 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
           IconButton(
+            tooltip: 'Riwayat Kwitansi',
+            onPressed: () => _openHistoryDialog(context),
+            icon: const Icon(Icons.history),
+          ),
+          IconButton(
             tooltip: 'Buka Pengaturan',
             onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
             icon: const Icon(Icons.tune),
@@ -147,11 +152,11 @@ class _HomePageState extends State<HomePage> {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const Divider(height: 28),
-              _field('Counter nomor', '${c.settings.receiptCounter}', 'Angka awal penomoran nota. Kosongkan jadi 0.',
-                  (v) => c.settings.receiptCounter = int.tryParse(v) ?? 0),
-              _field('Prefix nomor', c.settings.receiptPrefix, 'Contoh: AF', (v) => c.settings.receiptPrefix = v),
+              _field('Counter nomor', '${c.settings.receiptCounter}', 'Angka awal penomoran nota. Minimum 1.',
+                  (v) => c.setReceiptCounter(int.tryParse(v) ?? 1)),
+              _field('Prefix nomor', c.settings.receiptPrefix, 'Contoh: AF', c.setReceiptPrefix),
               _field('Format nomor', c.settings.receiptFormat,
-                  'Template: {counter}/{prefix}/{month}/{year}', (v) => c.settings.receiptFormat = v),
+                  'Template: {counter}/{prefix}/{month}/{year}', c.setReceiptFormat),
               _field('Skala print (%)', '${c.settings.printScale}', '70 = lebih kecil, 100 = normal',
                   (v) => c.settings.printScale = int.tryParse(v) ?? 70),
               const Divider(height: 28),
@@ -201,7 +206,7 @@ class _HomePageState extends State<HomePage> {
                         if (result?.files.single.path case final p?) c.setLogoMainPath(p);
                       },
                       icon: const Icon(Icons.image_outlined),
-                      label: const Text('Utama'),
+                      label: const Text('Logo Utama'),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -211,11 +216,29 @@ class _HomePageState extends State<HomePage> {
                         final result = await FilePicker.platform.pickFiles(type: FileType.image);
                         if (result?.files.single.path case final p?) c.setLogoSignaturePath(p);
                       },
-                      icon: const Icon(Icons.brush_outlined),
-                      label: const Text('TTD'),
+                      icon: const Icon(Icons.draw_outlined),
+                      label: const Text('Default TTD'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final result = await FilePicker.platform.pickFiles(type: FileType.image);
+                        if (result?.files.single.path case final p?) c.setCapSignaturePath(p);
+                      },
+                      icon: const Icon(Icons.verified_outlined),
+                      label: const Text('Cap TTD'),
                     ),
                   ),
                 ],
+              ),
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                value: c.settings.capSignatureEnabled,
+                onChanged: c.toggleCapSignature,
+                title: const Text('Aktifkan Cap TTD'),
+                subtitle: const Text('Jika nonaktif, hanya default TTD (pena) yang ditampilkan'),
               ),
               const SizedBox(height: 12),
               Row(
@@ -441,6 +464,18 @@ class _HomePageState extends State<HomePage> {
                                           icon: const Icon(Icons.print_outlined),
                                           label: const Text('Semua Batch'),
                                         ),
+                                        const SizedBox(width: 10),
+                                        OutlinedButton.icon(
+                                          onPressed: () async {
+                                            final path = await c.saveCurrentToPdf();
+                                            if (!context.mounted || path == null) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('PDF tersimpan: $path')),
+                                            );
+                                          },
+                                          icon: const Icon(Icons.picture_as_pdf_outlined),
+                                          label: const Text('Save PDF'),
+                                        ),
                                         if (c.batchQueue.isNotEmpty) ...[
                                           const SizedBox(width: 10),
                                           TextButton(
@@ -491,6 +526,60 @@ class _HomePageState extends State<HomePage> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _openHistoryDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Riwayat Kwitansi'),
+        content: SizedBox(
+          width: 760,
+          child: c.history.isEmpty
+              ? const Text('Belum ada riwayat.')
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: c.history.length,
+                  separatorBuilder: (_, separatorIndex) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final h = c.history[index];
+                    return ListTile(
+                      title: Text(h.title),
+                      subtitle: Text('${DateFormat('dd/MM/yyyy HH:mm').format(h.createdAt)} • ${h.receipt.recipientName.isEmpty ? '(Tanpa penerima)' : h.receipt.recipientName}'),
+                      onTap: () {
+                        c.loadHistoryToCurrent(h);
+                        Navigator.pop(context);
+                      },
+                      trailing: Wrap(
+                        spacing: 6,
+                        children: [
+                          IconButton(
+                            tooltip: 'Update dari nota aktif',
+                            onPressed: () => c.updateHistoryFromCurrent(h.id),
+                            icon: const Icon(Icons.update),
+                          ),
+                          IconButton(
+                            tooltip: 'Print ulang',
+                            onPressed: () => c.printCurrent(),
+                            icon: const Icon(Icons.print),
+                          ),
+                          IconButton(
+                            tooltip: 'Hapus',
+                            onPressed: () => c.deleteHistory(h.id),
+                            icon: const Icon(Icons.delete_outline),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(onPressed: c.history.isEmpty ? null : c.clearHistory, child: const Text('Hapus Semua')),
+          FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Tutup')),
+        ],
       ),
     );
   }

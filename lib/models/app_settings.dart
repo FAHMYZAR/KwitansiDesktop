@@ -24,6 +24,8 @@ class AppSettings {
     required this.customPaperHeightMm,
     this.logoMainPath,
     this.logoSignaturePath,
+    this.capSignaturePath,
+    this.capSignatureEnabled = true,
     this.logoMainScale = 100,
     this.logoSignatureScale = 100,
   });
@@ -52,6 +54,8 @@ class AppSettings {
   double customPaperHeightMm;
   String? logoMainPath;
   String? logoSignaturePath;
+  String? capSignaturePath;
+  bool capSignatureEnabled;
   int logoMainScale;
   int logoSignatureScale;
 
@@ -59,7 +63,7 @@ class AppSettings {
         themeSeed: 0xFF3F51B5,
         isDarkMode: false,
         printScale: 70,
-        receiptCounter: 0,
+        receiptCounter: 1,
         receiptPrefix: 'AF',
         receiptFormat: '{counter}/{prefix}/{month}/{year}',
         defaultRecipientName: '',
@@ -82,5 +86,9 @@ class AppSettings {
         paperPreset: 'F4',
         customPaperWidthMm: 210,
         customPaperHeightMm: 330,
+        logoMainPath: '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/LogoMain.jpg',
+        logoSignaturePath: '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/deafult_ttd.png',
+        capSignaturePath: '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/cap_ttd.png',
+        capSignatureEnabled: true,
       );
 }

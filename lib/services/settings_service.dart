@@ -13,11 +13,31 @@ class SettingsService {
     if (raw == null) return AppSettings.initial();
 
     final map = jsonDecode(raw) as Map<String, dynamic>;
+
+    const defaultMain = '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/LogoMain.jpg';
+    const defaultPenTtd = '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/deafult_ttd.png';
+    const defaultCap = '/mnt/data-fahmy/ProjectApp2/NotaAlyaFlorist/assets/cap_ttd.png';
+
+    String? mainPath = map['logoMainPath'] as String?;
+    String? penPath = map['logoSignaturePath'] as String?;
+    String? capPath = map['capSignaturePath'] as String?;
+
+    // Migrasi data lama agar layer default TTD (pena) & cap tidak kebalik.
+    if (penPath == null || penPath.isEmpty || penPath.endsWith('/logo_ttd.png')) {
+      penPath = defaultPenTtd;
+    }
+    if (capPath == null || capPath.isEmpty) {
+      capPath = defaultCap;
+    }
+    if (mainPath == null || mainPath.isEmpty || mainPath.endsWith('/logo_main.png')) {
+      mainPath = defaultMain;
+    }
+
     return AppSettings(
       themeSeed: map['themeSeed'] as int? ?? 0xFF3F51B5,
       isDarkMode: map['isDarkMode'] as bool? ?? false,
       printScale: map['printScale'] as int? ?? 70,
-      receiptCounter: map['receiptCounter'] as int? ?? 0,
+      receiptCounter: ((map['receiptCounter'] as int?) ?? 1) < 1 ? 1 : ((map['receiptCounter'] as int?) ?? 1),
       receiptPrefix: map['receiptPrefix'] as String? ?? 'AF',
       receiptFormat: map['receiptFormat'] as String? ?? '{counter}/{prefix}/{month}/{year}',
       defaultRecipientName: map['defaultRecipientName'] as String? ?? '',
@@ -40,8 +60,10 @@ class SettingsService {
       paperPreset: map['paperPreset'] as String? ?? 'F4',
       customPaperWidthMm: (map['customPaperWidthMm'] as num?)?.toDouble() ?? 210,
       customPaperHeightMm: (map['customPaperHeightMm'] as num?)?.toDouble() ?? 330,
-      logoMainPath: map['logoMainPath'] as String?,
-      logoSignaturePath: map['logoSignaturePath'] as String?,
+      logoMainPath: mainPath,
+      logoSignaturePath: penPath,
+      capSignaturePath: capPath,
+      capSignatureEnabled: map['capSignatureEnabled'] as bool? ?? true,
       logoMainScale: map['logoMainScale'] as int? ?? 100,
       logoSignatureScale: map['logoSignatureScale'] as int? ?? 100,
     );
@@ -74,6 +96,8 @@ class SettingsService {
       'customPaperHeightMm': s.customPaperHeightMm,
       'logoMainPath': s.logoMainPath,
       'logoSignaturePath': s.logoSignaturePath,
+      'capSignaturePath': s.capSignaturePath,
+      'capSignatureEnabled': s.capSignatureEnabled,
       'logoMainScale': s.logoMainScale,
       'logoSignatureScale': s.logoSignatureScale,
     };

@@ -106,7 +106,18 @@ class ReceiptPreviewCard extends StatelessWidget {
                     children: [
                       const Text('ALYAA FLORIST', style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 2),
-                      SizedBox(width: 42, height: 34, child: _logo(data.logoSignaturePath, data.logoSignatureScale)),
+                      SizedBox(
+                        width: 52,
+                        height: 42,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            _logo(data.logoSignaturePath, data.logoSignatureScale),
+                            if (data.capSignatureEnabled)
+                              _logo(data.capSignaturePath, data.logoSignatureScale),
+                          ],
+                        ),
+                      ),
                       Text(data.signer, style: const TextStyle(fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
                     ],
                   ),

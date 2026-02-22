@@ -1,23 +1,30 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../core/receipt_number_generator.dart';
 import '../models/app_settings.dart';
 import '../models/receipt_data.dart';
+import '../models/receipt_history_entry.dart';
 import '../models/receipt_item.dart';
 import '../services/draft_service.dart';
+import '../services/history_service.dart';
 import '../services/pdf_service.dart';
 import '../services/settings_service.dart';
 
 class ReceiptController extends ChangeNotifier {
-  ReceiptController(this._settingsService, this._pdfService, this._draftService);
+  ReceiptController(this._settingsService, this._pdfService, this._draftService, this._historyService);
 
   final SettingsService _settingsService;
   final PdfService _pdfService;
   final DraftService _draftService;
+  final HistoryService _historyService;
 
   AppSettings settings = AppSettings.initial();
   late ReceiptData current;
   final List<ReceiptData> batchQueue = [];
+  final List<ReceiptHistoryEntry> history = [];
   int editingBatchIndex = -1;
   bool loading = true;
 
@@ -27,12 +34,16 @@ class ReceiptController extends ChangeNotifier {
 
     final savedCurrent = await _draftService.loadCurrent();
     final savedBatch = await _draftService.loadBatch();
+    final savedHistory = await _historyService.load();
     if (savedCurrent != null) {
       current = savedCurrent;
     }
     batchQueue
       ..clear()
       ..addAll(savedBatch);
+    history
+      ..clear()
+      ..addAll(savedHistory);
 
     loading = false;
     notifyListeners();
@@ -47,6 +58,30 @@ class ReceiptController extends ChangeNotifier {
   void setThemeSeed(int color) {
     settings.themeSeed = color;
     _save();
+    notifyListeners();
+  }
+
+  void setReceiptCounter(int value) {
+    settings.receiptCounter = value < 1 ? 1 : value;
+    current.no = ReceiptNumberGenerator.generate(settings);
+    _save();
+    _saveDraft();
+    notifyListeners();
+  }
+
+  void setReceiptPrefix(String value) {
+    settings.receiptPrefix = value;
+    current.no = ReceiptNumberGenerator.generate(settings);
+    _save();
+    _saveDraft();
+    notifyListeners();
+  }
+
+  void setReceiptFormat(String value) {
+    settings.receiptFormat = value;
+    current.no = ReceiptNumberGenerator.generate(settings);
+    _save();
+    _saveDraft();
     notifyListeners();
   }
 
@@ -128,25 +163,50 @@ class ReceiptController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> printCurrent() {
+  Future<void> printCurrent() async {
     final (w, h) = _paperSize();
-    return _pdfService.printReceipts(
+    await _pdfService.printReceipts(
       [current],
       printScale: settings.printScale,
       paperWidthMm: w,
       paperHeightMm: h,
     );
+    await addHistoryFromReceipt(current.copy());
   }
 
-  Future<void> printBatch() {
-    if (batchQueue.isEmpty) return Future.value();
+  Future<void> printBatch() async {
+    if (batchQueue.isEmpty) return;
     final (w, h) = _paperSize();
-    return _pdfService.printReceipts(
+    await _pdfService.printReceipts(
       batchQueue,
       printScale: settings.printScale,
       paperWidthMm: w,
       paperHeightMm: h,
     );
+    for (final r in batchQueue) {
+      await addHistoryFromReceipt(r.copy());
+    }
+  }
+
+  Future<String?> saveCurrentToPdf() async {
+    final (w, h) = _paperSize();
+    final path = await FilePicker.platform.saveFile(
+      dialogTitle: 'Simpan PDF Kwitansi',
+      fileName: 'kwitansi_${current.no.replaceAll('/', '_')}.pdf',
+      type: FileType.custom,
+      allowedExtensions: ['pdf'],
+    );
+    if (path == null) return null;
+
+    final bytes = await _pdfService.buildPdfBytes(
+      [current],
+      printScale: settings.printScale,
+      paperWidthMm: w,
+      paperHeightMm: h,
+    );
+    await File(path).writeAsBytes(bytes, flush: true);
+    await addHistoryFromReceipt(current.copy());
+    return path;
   }
 
   void setLogoMainPath(String path) {
@@ -160,6 +220,22 @@ class ReceiptController extends ChangeNotifier {
   void setLogoSignaturePath(String path) {
     settings.logoSignaturePath = path;
     current.logoSignaturePath = path;
+    _save();
+    _saveDraft();
+    notifyListeners();
+  }
+
+  void setCapSignaturePath(String path) {
+    settings.capSignaturePath = path;
+    current.capSignaturePath = path;
+    _save();
+    _saveDraft();
+    notifyListeners();
+  }
+
+  void toggleCapSignature(bool enabled) {
+    settings.capSignatureEnabled = enabled;
+    current.capSignatureEnabled = enabled;
     _save();
     _saveDraft();
     notifyListeners();
@@ -206,6 +282,50 @@ class ReceiptController extends ChangeNotifier {
 
   Future<void> savePrintPreferences() async {
     await _save();
+    notifyListeners();
+  }
+
+  Future<void> addHistoryFromReceipt(ReceiptData receipt) async {
+    history.insert(
+      0,
+      ReceiptHistoryEntry(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        createdAt: DateTime.now(),
+        title: receipt.no.isEmpty ? 'Kwitansi' : receipt.no,
+        receipt: receipt,
+      ),
+    );
+    await _historyService.save(history);
+    notifyListeners();
+  }
+
+  void loadHistoryToCurrent(ReceiptHistoryEntry entry) {
+    current = entry.receipt.copy();
+    notifyListeners();
+  }
+
+  Future<void> updateHistoryFromCurrent(String id) async {
+    final idx = history.indexWhere((e) => e.id == id);
+    if (idx == -1) return;
+    history[idx] = ReceiptHistoryEntry(
+      id: id,
+      createdAt: history[idx].createdAt,
+      title: current.no.isEmpty ? history[idx].title : current.no,
+      receipt: current.copy(),
+    );
+    await _historyService.save(history);
+    notifyListeners();
+  }
+
+  Future<void> deleteHistory(String id) async {
+    history.removeWhere((e) => e.id == id);
+    await _historyService.save(history);
+    notifyListeners();
+  }
+
+  Future<void> clearHistory() async {
+    history.clear();
+    await _historyService.save(history);
     notifyListeners();
   }
 
